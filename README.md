@@ -1,2 +1,3 @@
-# route-stops-map
-Simple Map that Displays Stops for a Given Route
+# routemap
+> Simple Map that Displays a Route and its Stops
+
