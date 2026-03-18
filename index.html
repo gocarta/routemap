@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>CARTA Route Map</title>
+        <meta charset='utf-8' />
+        <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+        <script src="https://unpkg.com/maplibre-gl@^4.7.1/dist/maplibre-gl.js"></script>
+        <link href="https://unpkg.com/maplibre-gl@^4.7.1/dist/maplibre-gl.css" rel="stylesheet" />
+
+        <!-- font -->
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet">
+
+        <style>
+            * {
+                font-family: "Inter", sans-serif;
+                font-optical-sizing: auto;
+                font-style: normal;
+            }
+
+            body {
+                margin: 0;
+                padding: 0;
+            }
+
+            .maplibregl-popup-content {
+                white-space: pre-line;
+            }
+
+            #app {
+                bottom: 0;
+                left: 0;
+                right: 0;
+                position: absolute;
+                top: 0;
+            }
+            #map {
+                bottom: 30px;
+                left: 0;
+                right: 0;
+                position: absolute;
+                top: 56px;                
+            }
+
+            #footer {
+                background: #004360;
+                bottom: 0;
+                height: 30px;
+                position: absolute;
+                width: 100%;
+                z-index: 99;
+            }
+
+            #footer-text {
+                color: lightgray;
+                left: 10px;
+                position: absolute;
+                top: 50%;
+                transform: translateY(-50%);
+            }
+
+            #header {
+                background-color: #00D3EB;
+                display: block;
+                height: 56px;
+                position: relative;
+                width: 100%;
+                z-index: 99;
+            }
+
+            #header #logo {
+                left: 10px;
+                position: absolute;
+                top: 50%;
+                transform: translateY(-50%);
+                width: 165px;
+            }
+
+            #header #text {
+                /* font-size: 16px;
+                font-weight: 400;
+                letter-spacing: .32px; */
+
+
+                left: 200px;
+                position: absolute;
+                color: whitesmoke;
+                top: 50%;
+                transform: translateY(-50%);
+            }
+
+            #pagename {
+                display: inline-block;
+                font-size: 26px;
+                font-weight: bold;
+            }
+
+            #warning {
+                display: inline-block;
+                color: black;
+                font-weight: bold;
+                margin-left: 15px;
+            }
+            #warning-mobile-inner {
+                left: 15px;
+                position: absolute;
+                top: 50%;
+                transform: translateY(-50%);
+            }
+
+            @media screen and (max-width: 800px) {
+                #footer {
+                    font-size: 12px;
+                }
+
+                #logo {
+                    display: none;
+                }
+                #header #text {
+                    left: 15px;
+                }
+
+                /* #warning {
+                    display: none;
+                }
+                #warning-mobile {
+                    background: #004360;
+                    height: 30px;
+                    left: 0;
+                    padding-left: 10px;
+                    position: absolute;
+                    right: 0;
+                    top: 56px;
+                    width: 100%;
+                } */
+            }
+
+            .marker {
+                border: 2px solid #004360;
+                /* background: #00A3BD; */
+                border-radius: 26px;
+                cursor: pointer;
+                height: 26px;
+                text-align: center;
+                width: 26px;
+            }
+            .marker:hover {
+                height: 32px;
+                width: 32px;
+            }
+            .marker-inner {
+                background: #00A3BD;
+                border-radius: 25px;
+                height: 25px;
+                left: 50%;
+                position: absolute;
+                top: 50%;
+                transform: translate(-50%, -50%);
+                width: 25px;
+            }
+            .marker-inner-power {
+                background: transparent;
+                height: 30px;
+                left: 50%;
+                position: absolute;
+                top: 50%;
+                transform: translate(-50%, -50%);
+                width: 30px;
+            }
+
+
+            .marker.own-tracks:hover {
+                border-radius: 0;
+                width: 100px;
+            }
+            .own-tracks-inner {
+                background: #e304f7;
+                border-radius: 0;
+                height: 25px;
+                width: 25px;
+            }            
+            .own-tracks {
+                border: 2px solid #4d0353;
+                border-radius: 0;
+            }
+            .own-tracks-inner .marker-inner-text {
+                background: #e304f7;
+                border: 2px solid #4d0353;
+                display: none;
+                left: 50%;
+                position: absolute;
+                transform: translate(-50%, -50%);
+                top: 50%;
+            }
+            .marker.own-tracks:hover .own-tracks-inner .marker-inner-text {
+                display: block;
+            }
+            .battery-warning {
+                background: red;
+            }
+
+            .router-inner {
+                background: #f7b204;
+                border-radius: 0;
+                height: 25px;
+                width: 25px;
+            }
+            .router {
+                border: 2px solid #cb9712;
+                border-radius: 0;
+                height: 25px;
+                width: 25px;
+            }
+            .router[data-description=CAV] {
+                border-color: rgb(42, 80, 5);
+            }
+
+            .router[data-description=CAV] .router-inner {
+                background: rgb(126, 214, 39);
+            }
+            .marker-inner-text {
+                left: 50%;
+                position: absolute;
+                transform: translate(-50%, -50%);
+                top: 50%;
+            }
+
+            .cav-vehicle-inner {
+                background: chartreuse;
+                border-radius: 0;
+                height: 25px;
+                width: 25px;
+            }
+            .cav-vehicle {
+                border: 2px solid darkolivegreen;
+                border-radius: 0;
+                height: 25px;
+                width: 25px;
+            }
+            .bus-inner img {
+                height: 15px;
+                left: 50%;
+                position: absolute;
+                top: 50%;
+                transform: translate(-50%, -50%);
+                width: 15px;
+            }
+
+    </style>
+        <script>
+            window.app = {
+                config: {
+                    routes: "https://gocarta.s3.us-east-2.amazonaws.com/public/data/simple_bus_routes/v1/data.lines.geojson",
+                    stops: "https://gocarta.s3.us-east-2.amazonaws.com/public/data/simple_bus_stops/v1/data.points.geojson"
+                },
+                data: {
+                    routes: null,
+                    stops: null
+                },
+                state: {
+                    route: null
+                }
+            };
+        </script>
+    </head>
+    <body>
+        <div id="app">
+            <div id="header">
+                <a href="https://www.gocarta.org/"><img id="logo" src="./assets/img/carta-logo.webp" alt="CARTA logo"></a>
+                <div id="text">
+                    <div id="pagename">CARTA Route Map</div>
+                </div>
+            </div>
+            <div id="map"></div>
+            <div id="footer">
+                <div id="footer-text">
+                    Built by CARTA with MapLibreGL.
+                </div>
+            </div>
+        </div>
+        <script>
+            window.app.state.route = new URLSearchParams(window.location.search).get("route");
+
+            function get_xy_point(item) {
+                if (typeof item.loc === "object" && item.loc.type === "Point" && typeof item.loc.coordinates === "object" && item.loc.coordinates.length === 2) {
+                    return item.loc.coordinates;
+                } else if (typeof item.latitude === "number" && typeof item.longitude === "number") {
+                    return [item.longitude, item.latitude];
+                } else if (typeof item.latitude === "string" && typeof item.longitude === "string") {
+                    return [Number(item.longitude), Number(item.latitude)];                    
+                } else if (typeof item.Latitude === "number" && typeof item.Longitude === "number") {
+                    return [item.Longitude, item.Latitude];
+                } else if (typeof item.lat === "number" && typeof item.lon === "number") {
+                    return [item.lon, item.lat];
+                } else if (typeof item.lat === "string" && typeof item.lon === "string") {
+                    return [Number(item.lon), Number(item.lat)];                    
+                } else {
+                    console.log("failed to parse", item);
+                }
+            }
+            
+            var mapOptions = {
+                container: 'map', // container id
+                // Define the map syle (OpenStreetMap raster tiles)
+                style: "https://api.maptiler.com/maps/streets-v2-light/style.json?key=mYniYTe7rfEM5jAFdfKy",
+                center: [-85.310947, 35.055666], // starting position [lng, lat]
+                zoom: 11 // starting zoom
+            };
+
+            // zoom out more if on mobile
+            if (window.innerWidth < 800) {
+                mapOptions.zoom = 9;
+                mapOptions.attributionControl = false;
+            }
+
+            var map = new maplibregl.Map(mapOptions);
+
+            if (window.innerWidth < 800) {
+                map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-right');
+            }
+
+            // add bus routes
+            (async function update_route () {
+                const res = await fetch(window.app.config.routes);
+                const routes_geojson = await res.json();
+                console.log(routes_geojson);
+
+                // filter by route
+                const route = routes_geojson.features.find(feature => feature.properties.id === app.state.route);
+
+                if (!route) {
+                    console.error("couldn't find route");
+                    return;
+                }
+
+                map.addSource('simple-bus-route', {
+                    'type': 'geojson',
+                    'data': route
+                });
+
+                map.addLayer({
+                    'id': 'route-layer',
+                    'type': 'line',
+                    'source': 'simple-bus-route',
+                    'layout': {
+                        'line-join': 'round',
+                        'line-cap': 'round'
+                    },
+                    'paint': {
+                        // This expression tells MapLibre: 
+                        // "Look at the 'stroke' property of the feature and use it as the color."
+                        // If 'stroke' is missing, default to '#000' (black).
+                        'line-color': ['get', 'stroke'], 
+                        'line-width': 3,
+                        'line-opacity': 0.6                        
+                    }
+                });
+                
+                // 2. Initialize the bounds object
+                const bounds = new maplibregl.LngLatBounds();
+
+                // 3. Extract coordinates based on geometry type
+                const geometry = route.geometry;
+                const coords = geometry.type === 'LineString' 
+                    ? geometry.coordinates 
+                    : geometry.coordinates.flat(1); // Handles MultiLineString segments
+
+                // 4. Extend bounds to include every point in the line
+                coords.forEach(coord => {
+                    bounds.extend(coord);
+                });
+
+                // 5. Fit the map to the resulting box
+                map.fitBounds(bounds, {
+                    padding: 40,      // Adds a 40px buffer so the line isn't touching the edge
+                    duration: 2000,   // Smooth animation over 2 seconds
+                    essential: true   // Ensures the animation happens even if user prefers reduced motion
+                });
+                
+            })();
+
+            // add bus stops
+            (async function update_stops () {
+                const res = await fetch(window.app.config.stops);
+                const stops_geojson = await res.json();
+                console.log(stops_geojson);
+
+                // filter by stops
+                const stops = {
+                    type: "FeatureCollection",
+                    features: stops_geojson.features.filter(feature => feature.properties.route_ids.split(",").includes(app.state.route))
+                };
+
+                if (!stops) {
+                    console.error("couldn't find stops");
+                    return;
+                }
+
+                console.log(stops);
+                map.addSource('simple-bus-stops', {
+                    'type': 'geojson',
+                    'data': stops
+                });
+
+                map.addLayer({
+                    'id': 'stops-layer',
+                    'type': 'circle',
+                    'source': 'simple-bus-stops',
+                    'paint': {
+                        'circle-radius': 8,
+                        'circle-color': '#ff5500',
+                        'circle-stroke-width': 2,
+                        'circle-stroke-color': '#ffffff'
+                    }
+                });
+            })();
+        </script>
+    </body>
+</html>
