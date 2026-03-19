@@ -226,18 +226,6 @@
                 top: 50%;
             }
 
-            .cav-vehicle-inner {
-                background: chartreuse;
-                border-radius: 0;
-                height: 25px;
-                width: 25px;
-            }
-            .cav-vehicle {
-                border: 2px solid darkolivegreen;
-                border-radius: 0;
-                height: 25px;
-                width: 25px;
-            }
             .bus-inner img {
                 height: 15px;
                 left: 50%;
@@ -282,6 +270,8 @@
         <script>
             window.app.state.route = new URLSearchParams(window.location.search).get("route");
 
+            document.getElementById("pagename").textContent = "Route " + window.app.state.route;
+
             function get_xy_point(item) {
                 if (typeof item.loc === "object" && item.loc.type === "Point" && typeof item.loc.coordinates === "object" && item.loc.coordinates.length === 2) {
                     return item.loc.coordinates;
@@ -316,15 +306,26 @@
 
             var map = new maplibregl.Map(mapOptions);
 
+            map.on('load', async () => {
+                // This is an empty "folder" that sits at the top of the stack
+                map.addLayer({
+                    id: 'top-of-the-world',
+                    type: 'background',
+                    paint: { 'background-opacity': 0 }
+                });
+                await add_route();
+                await update_stops();
+            });
+
             if (window.innerWidth < 800) {
                 map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-right');
             }
 
             // add bus routes
-            (async function update_route () {
+            async function add_route () {
                 const res = await fetch(window.app.config.routes);
                 const routes_geojson = await res.json();
-                console.log(routes_geojson);
+                // console.log(routes_geojson);
 
                 // filter by route
                 const route = routes_geojson.features.find(feature => feature.properties.id === app.state.route);
@@ -378,13 +379,13 @@
                     essential: true   // Ensures the animation happens even if user prefers reduced motion
                 });
                 
-            })();
+            }
 
             // add bus stops
-            (async function update_stops () {
+            async function update_stops () {
                 const res = await fetch(window.app.config.stops);
                 const stops_geojson = await res.json();
-                console.log(stops_geojson);
+                // console.log(stops_geojson);
 
                 // filter by stops
                 const stops = {
@@ -408,13 +409,48 @@
                     'type': 'circle',
                     'source': 'simple-bus-stops',
                     'paint': {
-                        'circle-radius': 8,
-                        'circle-color': '#ff5500',
+                        'circle-radius': 4,
+                        'circle-color': '#fff000',
                         'circle-stroke-width': 2,
-                        'circle-stroke-color': '#ffffff'
+                        'circle-stroke-color': '#000000'
                     }
                 });
-            })();
+            }
+
+            // Add click event for the stops layer
+            map.on('click', 'stops-layer', (e) => {
+                const coordinates = e.features[0].geometry.coordinates.slice();
+                const props = e.features[0].properties;
+
+                // Build the popup content
+                // Adjust 'route_ids' and 'name' if your GeoJSON keys are different
+                const description = `
+                    <strong>Stop Id:</strong><br>${props.id || 'Unknown Id'}<br>
+                    <strong>Stop Name:</strong><br>${props.name || 'Unknown Name'}
+                `;
+
+                // Ensure that if the map is zoomed out such that multiple
+                // copies of the feature are visible, the popup appears
+                // over the copy being pointed to.
+                while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
+                    coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
+                }
+
+                new maplibregl.Popup()
+                    .setLngLat(coordinates)
+                    .setHTML(description)
+                    .addTo(map);
+            });
+
+            // Change the cursor to a pointer when the mouse is over the stops layer.
+            map.on('mouseenter', 'stops-layer', () => {
+                map.getCanvas().style.cursor = 'pointer';
+            });
+
+            // Change it back to a pointer when it leaves.
+            map.on('mouseleave', 'stops-layer', () => {
+                map.getCanvas().style.cursor = '';
+            });
         </script>
     </body>
 </html>
