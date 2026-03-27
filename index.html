@@ -137,9 +137,9 @@
             }
 
             .marker {
-                border: 2px solid #004360;
+                border: 2px solid rgb(28, 51, 5);
                 /* background: #00A3BD; */
-                border-radius: 26px;
+                border-radius: 3px;
                 cursor: pointer;
                 height: 26px;
                 text-align: center;
@@ -150,8 +150,8 @@
                 width: 32px;
             }
             .marker-inner {
-                background: #00A3BD;
-                border-radius: 25px;
+                background: orange;
+                border-radius: 0px;
                 height: 25px;
                 left: 50%;
                 position: absolute;
@@ -159,66 +159,7 @@
                 transform: translate(-50%, -50%);
                 width: 25px;
             }
-            .marker-inner-power {
-                background: transparent;
-                height: 30px;
-                left: 50%;
-                position: absolute;
-                top: 50%;
-                transform: translate(-50%, -50%);
-                width: 30px;
-            }
 
-
-            .marker.own-tracks:hover {
-                border-radius: 0;
-                width: 100px;
-            }
-            .own-tracks-inner {
-                background: #e304f7;
-                border-radius: 0;
-                height: 25px;
-                width: 25px;
-            }            
-            .own-tracks {
-                border: 2px solid #4d0353;
-                border-radius: 0;
-            }
-            .own-tracks-inner .marker-inner-text {
-                background: #e304f7;
-                border: 2px solid #4d0353;
-                display: none;
-                left: 50%;
-                position: absolute;
-                transform: translate(-50%, -50%);
-                top: 50%;
-            }
-            .marker.own-tracks:hover .own-tracks-inner .marker-inner-text {
-                display: block;
-            }
-            .battery-warning {
-                background: red;
-            }
-
-            .router-inner {
-                background: #f7b204;
-                border-radius: 0;
-                height: 25px;
-                width: 25px;
-            }
-            .router {
-                border: 2px solid #cb9712;
-                border-radius: 0;
-                height: 25px;
-                width: 25px;
-            }
-            .router[data-description=CAV] {
-                border-color: rgb(42, 80, 5);
-            }
-
-            .router[data-description=CAV] .router-inner {
-                background: rgb(126, 214, 39);
-            }
             .marker-inner-text {
                 left: 50%;
                 position: absolute;
@@ -240,13 +181,18 @@
             window.app = {
                 config: {
                     routes: "https://gocarta.s3.us-east-2.amazonaws.com/public/data/simple_bus_routes/v1/data.lines.geojson",
-                    stops: "https://gocarta.s3.us-east-2.amazonaws.com/public/data/simple_bus_stops/v1/data.points.geojson"
+                    stops: "https://gocarta.s3.us-east-2.amazonaws.com/public/data/simple_bus_stops/v1/data.points.geojson",
+                    buses: "https://gocarta.s3.us-east-2.amazonaws.com/public/data/clever_vehicle_locations/v1/data.json"
                 },
                 data: {
                     routes: null,
-                    stops: null
+                    stops: null,
+                    buses: null
                 },
                 state: {
+                    markers: {
+                        buses: null
+                    },
                     route: null
                 }
             };
@@ -315,6 +261,7 @@
                 });
                 await add_route();
                 await update_stops();
+                await update_buses();
             });
 
             if (window.innerWidth < 800) {
@@ -416,6 +363,59 @@
                     }
                 });
             }
+
+            async function update_buses () {
+                console.log("updating buses");
+                const res = await fetch(window.app.config.buses);
+                app.data.buses = await res.json();
+
+                if (app.state.markers.buses) {
+                    app.state.markers.buses.forEach(marker => {
+                        marker.remove();
+                    });
+                }
+                app.state.markers.buses = [];
+
+                const buses = app.data.buses;
+                for (let i = 0; i < buses.length; i++) {
+                    const bus = buses[i];
+
+                    if (bus.route !== app.state.route) {
+                        continue;
+                    }
+
+                    const point = get_xy_point(bus);  
+                    console.log("point:", point);
+                    if (!point) continue;
+
+                    // create a DOM element for the marker
+                    const el = document.createElement('div');
+                    el.className = "marker bus";
+                    el.innerHTML = `<div class="marker-inner bus-inner"><div class="marker-inner-text">${bus.route}</div></div>`;
+
+                    const description = [
+                        "bus:\n" + bus.vehicle_id,
+                        "destination:\n" + bus.destination,
+                        "last updated:\n" + new Date(bus.timestamp).toLocaleString()
+                    ].filter(Boolean).join("\n\n");
+                    const popup = new maplibregl.Popup({offset: 25}).setText(description.trim());
+
+                    const marker = new maplibregl.Marker( { element: el })
+                        .setLngLat(point)
+                        .setPopup(popup)
+                        .addTo(map);
+
+                    app.state.markers.buses.push(marker);
+                }
+            }
+
+            if (window.location.href.includes("hide_buses=true") === false) {
+                update_buses();
+                setInterval(function () {
+                    update_buses();
+                }, 15 * 1000);
+            }
+            
 
             // Add click event for the stops layer
             map.on('click', 'stops-layer', (e) => {
