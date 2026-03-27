@@ -1,5 +1,5 @@
 # routemap
-> Simple Map that Displays a Route and its Stops
+> Simple Map that Displays a Route, its Stops and its Buses.
 
 <img width="684" height="456" alt="route_1_image" src="https://github.com/user-attachments/assets/ecc60272-e902-4fbb-9f18-e132cd6d939d" />
 
